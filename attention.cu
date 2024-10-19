@@ -93,19 +93,19 @@ void attention(
     cudaMemcpy(d_mask, mask, size_scores, cudaMemcpyHostToDevice);
 
     // Launch compute_attention kernel
-    dim3 blockDim(64, 64);
+    dim3 blockDim(16, 16);
     dim3 gridDim((seq_len + blockDim.x - 1) / blockDim.x, (seq_len + blockDim.y - 1) / blockDim.y);
 
     compute_attention<<<gridDim, blockDim>>>(d_q, d_k, d_mask, d_scores, seq_len, depth);
 
     // Launch softmax kernel
-    int threads = 4096;
+    int threads = 256;
     int blocks = (seq_len + threads - 1) / threads;
 
     softmax_kernel<<<blocks, threads>>>(d_scores, seq_len);
 
     // Launch compute_output kernel
-    dim3 blockDim2(64, 64);
+    dim3 blockDim2(16, 16);
     dim3 gridDim2((seq_len + blockDim2.x - 1) / blockDim2.x, (depth + blockDim2.y - 1) / blockDim2.y);
 
     compute_output<<<gridDim2, blockDim2>>>(d_scores, d_v, d_output, seq_len, depth);
