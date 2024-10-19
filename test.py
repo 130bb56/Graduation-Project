@@ -50,22 +50,11 @@ def attention(q, k, v, mask):
     return output
 
 def mha(x, c_attn, c_proj, n_head):
-    x = linear(x, c_attn['w'], c_attn['b'])
-    qkv = np.split(x, 3, axis=-1)
-    q_heads = np.split(qkv[0], n_head, axis=-1)
-    k_heads = np.split(qkv[1], n_head, axis=-1)
-    v_heads = np.split(qkv[2], n_head, axis=-1)
-
-    seq_len = x.shape[0]
-    causal_mask = (1 - np.tri(seq_len, k=0, dtype=np.float32)) * -1e10
-
-    out_heads = []
-    for q, k, v in zip(q_heads, k_heads, v_heads):
-        out = attention(q, k, v, causal_mask)
-        out_heads.append(out)
-
-    x = np.concatenate(out_heads, axis=-1)
-    x = linear(x, c_proj['w'], c_proj['b'])
+    x = linear(x, **c_attn)
+    qkv_heads = list(map(lambda x: np.split(x, n_head, axis=-1), np.split(x, 3, axis=-1)))
+    causal_mask = (1 - np.tri(x.shape[0], dtype=x.dtype)) * -1e10
+    out_heads = [attention(q, k, v, causal_mask) for q, k, v in zip(*qkv_heads)]
+    x = linear(np.hstack(out_heads), **c_proj)
     return x
 
 def transformer_block(x, mlp, attn, ln_1, ln_2, n_head):
