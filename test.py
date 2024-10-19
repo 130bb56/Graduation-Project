@@ -2,8 +2,6 @@ import numpy as np
 import ctypes
 import os
 
-# CUDA 커널 로드
-# 현재 디렉토리에서 attention.so를 찾습니다.
 attention_lib = ctypes.cdll.LoadLibrary(os.path.abspath("./attention.so"))
 
 def gelu(x):
@@ -25,7 +23,6 @@ def ffn(x, c_fc, c_proj):
     return linear(gelu(linear(x, **c_fc)), **c_proj)
 
 def attention(q, k, v, mask):
-    # 입력 배열을 플래튼하고 float32로 변환
     seq_len, depth = q.shape
     q_flat = q.astype(np.float32).flatten()
     k_flat = k.astype(np.float32).flatten()
@@ -33,26 +30,22 @@ def attention(q, k, v, mask):
     mask_flat = mask.astype(np.float32).flatten()
     output_flat = np.zeros_like(q_flat, dtype=np.float32)
 
-    # 포인터 생성
     q_ptr = q_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     k_ptr = k_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     v_ptr = v_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     mask_ptr = mask_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
 
-    # CUDA 함수 설정
     attention_lib.attention.argtypes = [
         ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int
     ]
 
-    # CUDA 함수 호출
     attention_lib.attention(
         q_ptr, k_ptr, v_ptr, mask_ptr, output_ptr, ctypes.c_int(seq_len), ctypes.c_int(depth)
     )
 
-    # 결과를 원래 형태로 변환
     output = output_flat.reshape(seq_len, depth)
     return output
 
@@ -101,10 +94,9 @@ def main(prompt: str, n_tokens_to_generate: int = 20, model_size: str = "124M", 
     assert len(input_ids) + n_tokens_to_generate < hparams["n_ctx"]
     output_ids = generate(input_ids, params, hparams["n_head"], n_tokens_to_generate)
     output_text = encoder.decode(output_ids)
-    #print(output_text)
+    print(output_text)
     return output_text
 
 if __name__ == "__main__":
     import fire
     fire.Fire(main)
-
