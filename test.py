@@ -94,7 +94,6 @@ def main(prompt: str, n_tokens_to_generate: int = 20, model_size: str = "124M", 
     assert len(input_ids) + n_tokens_to_generate < hparams["n_ctx"]
     output_ids = generate(input_ids, params, hparams["n_head"], n_tokens_to_generate)
     output_text = encoder.decode(output_ids)
-    print(output_text)
     return output_text
 
 if __name__ == "__main__":
