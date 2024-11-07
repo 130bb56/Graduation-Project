@@ -49,16 +49,7 @@ __global__ void attention_kernel(
         scores[k_pos] = scores[k_pos] * scale + mask[q_pos * seq_len + k_pos];
         scores[k_pos] += mask[q_pos * seq_len + k_pos];
         max_score = fmaxf(max_score, scores[k_pos]);
-        /*
-        if (scores[k_pos] > max_score)
-            max_score = scores[k_pos];
-        */
     }
-    /*
-    for (int k_pos = 0; k_pos < seq_len; k_pos++) {
-        max_score = fmaxf(max_score, scores[k_pos]);
-    }
-    */
     float sum_exp = 0.0f;
     for (int k_pos = 0; k_pos < seq_len; ++k_pos) {
         scores[k_pos] = expf(scores[k_pos] - max_score);
@@ -69,7 +60,6 @@ __global__ void attention_kernel(
         float result = 0.0f;
         for (int k_pos = 0; k_pos < seq_len; ++k_pos) {
             float attn_weight = scores[k_pos] / sum_exp;
-            //float v_val = v_ptr[k_pos * head_dim + d];
             result += attn_weight * v_[k_pos * head_dim + d];
         }
         output_ptr[d] = result;
@@ -91,14 +81,12 @@ void attention(
     size_t size_qkv = sizeof(float) * total_heads * seq_len * head_dim;
     size_t size_mask = sizeof(float) * seq_len * seq_len;
 
-    // 디바이스 메모리 할당
     cudaMalloc((void**)&d_q, size_qkv);
     cudaMalloc((void**)&d_k, size_qkv);
     cudaMalloc((void**)&d_v, size_qkv);
     cudaMalloc((void**)&d_mask, size_mask);
     cudaMalloc((void**)&d_output, size_qkv);
 
-    // 호스트에서 디바이스로 데이터 복사
     cudaMemcpy(d_q, q, size_qkv, cudaMemcpyHostToDevice);
     cudaMemcpy(d_k, k, size_qkv, cudaMemcpyHostToDevice);
     cudaMemcpy(d_v, v, size_qkv, cudaMemcpyHostToDevice);
@@ -123,5 +111,4 @@ void attention(
     cudaFree(d_output);
 }
 
-} // extern "C"
-
+} 
