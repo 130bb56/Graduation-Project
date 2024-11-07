@@ -87,7 +87,6 @@ void attention(
     cudaStream_t stream;
     cudaError_t cuda_status;
 
-    // 스트림 생성
     cuda_status = cudaStreamCreate(&stream);
     if (cuda_status != cudaSuccess) {
         printf("Stream creation failed: %s\n", cudaGetErrorString(cuda_status));
