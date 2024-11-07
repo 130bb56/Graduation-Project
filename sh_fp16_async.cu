@@ -2,7 +2,6 @@
 #include <cuda.h>
 #include <cuda_fp16.h>
 #include <stdio.h>
-// fork from https://github.com/130bb56/Graduation-Project/blob/main/shared/shared.cu
 extern "C" {
 
 __global__ void attention_kernel(
@@ -11,13 +10,6 @@ __global__ void attention_kernel(
     const __half* __restrict__ v,    // (total_heads, seq_len, head_dim)
     const __half* __restrict__ mask, // (seq_len, seq_len)
     __half* __restrict__ output,     // (total_heads, seq_len, head_dim)
-    /*
-    const __half *q,    // (total_heads, seq_len, head_dim)
-    const __half *k,    // (total_heads, seq_len, head_dim)
-    const __half *v,    // (total_heads, seq_len, head_dim)
-    const __half *mask, // (seq_len, seq_len)
-    __half *output,     // (total_heads, seq_len, head_dim)
-    */
     int total_heads,
     int seq_len,
     int head_dim) {
@@ -55,7 +47,6 @@ __global__ void attention_kernel(
     __half max_score = __float2half(-1e4f);
 
     for (int k_pos = 0; k_pos < seq_len; ++k_pos) {
-        //scores[k_pos] = __float2half(0.0f);
         int idx = seq_len * q_pos + k_pos;
         for (int d = 0; d < head_dim; ++d) {
             scores[idx] = __hadd(scores[idx], __hmul(q_[q_pos * head_dim + d], k_[k_pos * head_dim + d]));
@@ -75,7 +66,6 @@ __global__ void attention_kernel(
         __half result = __float2half(0.0f);
         for (int k_pos = 0; k_pos < seq_len; ++k_pos) {
             __half attn_weight = __hdiv(scores[seq_len * q_pos + k_pos], sum_exp);
-            //float v_val = v_ptr[k_pos * head_dim + d];
             result = __hadd(result, __hmul(attn_weight, v_[k_pos * head_dim + d]));
         }
         output_ptr[d] = result;
@@ -145,4 +135,4 @@ void attention(
     cudaStreamDestroy(stream);
 }
 
-} // extern "C"
+}
