@@ -16,15 +16,15 @@ __global__ void attention_kernel(
 
     extern __shared__ float sram[]; // Load shared mem
     int head_idx = blockIdx.x; // total_heads
-    int q_pos = threadIdx.x;   // seq_len
+    int seq_idx = threadIdx.x;   // seq_len
 
-    if (head_idx >= total_heads || q_pos >= seq_len)
+    if (head_idx >= total_heads || seq_idx >= seq_len)
         return;
 
-    const float *q_ptr = q + head_idx * seq_len * head_dim + q_pos * head_dim;
+    const float *q_ptr = q + head_idx * seq_len * head_dim + seq_idx * head_dim;
     const float *k_ptr = k + head_idx * seq_len * head_dim;
     const float *v_ptr = v + head_idx * seq_len * head_dim;
-    float *output_ptr = output + head_idx * seq_len * head_dim + q_pos * head_dim;
+    float *output_ptr = output + head_idx * seq_len * head_dim + seq_idx * head_dim;
     
     float *q_ = sram;
     float *k_ = q_ + seq_len * head_dim;
@@ -32,9 +32,9 @@ __global__ void attention_kernel(
     const float scale = 1.0f / sqrtf((float)head_dim);
 
     for (int d = 0; d < head_dim; ++d) {
-        q_[q_pos * head_dim + d] = q_ptr[d];
-        k_[q_pos * head_dim + d] = k_ptr[q_pos * head_dim + d];
-        v_[q_pos * head_dim + d] = v_ptr[q_pos * head_dim + d];
+        q_[seq_idx * head_dim + d] = q_ptr[d];
+        k_[seq_idx * head_dim + d] = k_ptr[seq_idx * head_dim + d];
+        v_[seq_idx * head_dim + d] = v_ptr[seq_idx * head_dim + d];
     }
     __syncthreads();
 
@@ -44,10 +44,10 @@ __global__ void attention_kernel(
     for (int k_pos = 0; k_pos < seq_len; ++k_pos) {
         scores[k_pos] = 0.0f;
         for (int d = 0; d < head_dim; ++d) {
-            scores[k_pos] += q_[q_pos * head_dim + d] * k_[k_pos * head_dim + d];
+            scores[k_pos] += q_[seq_idx * head_dim + d] * k_[k_pos * head_dim + d];
         }
-        scores[k_pos] = scores[k_pos] * scale + mask[q_pos * seq_len + k_pos];
-        scores[k_pos] += mask[q_pos * seq_len + k_pos];
+        scores[k_pos] = scores[k_pos] * scale + mask[seq_idx * seq_len + k_pos];
+        scores[k_pos] += mask[seq_idx * seq_len + k_pos];
         max_score = fmaxf(max_score, scores[k_pos]);
     }
     float sum_exp = 0.0f;
